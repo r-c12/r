@@ -1,57 +1,57 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, ImageBackground, StyleSheet, Picker } from 'react-native';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  StyleSheet,
+  ImageBackground,
+  Alert,
+} from "react-native";
 
-export default function HomeScreen() {
-  const [temperature, setTemperature] = useState('');
-  const [unit, setUnit] = useState('Celsius');
-  const [convertedTemperature, setConvertedTemperature] = useState(null);
+export default function HomeScreen({ navigation }) {
+  const [weight, setWeight] = useState("");
+  const [height, setHeight] = useState("");
 
-  const handleConvert = () => {
-    if (temperature === '') {
-      alert('Please enter a temperature value.');
-      return;
-    }
+  const calculateBMI = () => {
+    if (weight && height && !isNaN(weight) && !isNaN(height)) {
+      const bmi = (
+        parseFloat(weight) /
+        (parseFloat(height) * parseFloat(height))
+      ).toFixed(2);
 
-    let result = 0;
-    if (unit === 'Celsius') {
-      result = (parseFloat(temperature) * 9 / 5) + 32; // Celsius to Fahrenheit
+      console.log("Calculated BMI:", bmi);
+      navigation.navigate("Result", { bmi });
+
     } else {
-      result = (parseFloat(temperature) - 32) * 5 / 9; // Fahrenheit to Celsius
+      Alert.alert("Input Error", "Please enter valid height and weight!");
     }
-
-    setConvertedTemperature(result.toFixed(2));
   };
 
   return (
-    <ImageBackground source={require('./assets/itachi.jpg')} style={styles.background}>
+    <ImageBackground
+      source={require("./assets/obito.jpg")}
+      style={styles.background}
+    >
       <View style={styles.container}>
-        <Text style={styles.title}>Temperature Converter</Text>
-
+        <Text style={styles.title}>BMI Calculator</Text>
+        
         <TextInput
           style={styles.input}
-          placeholder="Enter temperature"
+          placeholder="Enter weight in kg"
           keyboardType="numeric"
-          value={temperature}
-          onChangeText={setTemperature}
+          value={weight}
+          onChangeText={setWeight}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Enter height in meters"
+          keyboardType="numeric"
+          value={height}
+          onChangeText={setHeight}
         />
 
-        <Text style={styles.label}>Select Unit:</Text>
-        <Picker
-          selectedValue={unit}
-          style={styles.picker}
-          onValueChange={(itemValue) => setUnit(itemValue)}
-        >
-          <Picker.Item label="Celsius" value="Celsius" />
-          <Picker.Item label="Fahrenheit" value="Fahrenheit" />
-        </Picker>
-
-        <Button title="Convert" onPress={handleConvert} />
-
-        {convertedTemperature !== null && (
-          <Text style={styles.result}>
-            Converted Temperature: {convertedTemperature} {unit === 'Celsius' ? 'Fahrenheit' : 'Celsius'}
-          </Text>
-        )}
+        <Button title="Calculate BMI" onPress={calculateBMI} />
       </View>
     </ImageBackground>
   );
@@ -60,41 +60,26 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   background: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   container: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
     padding: 20,
     borderRadius: 10,
     marginHorizontal: 20,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
     marginBottom: 20,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     padding: 10,
     marginVertical: 10,
     borderRadius: 5,
     fontSize: 18,
-  },
-  label: {
-    fontSize: 18,
-    marginBottom: 10,
-  },
-  picker: {
-    height: 50,
-    marginBottom: 20,
-  },
-  result: {
-    fontSize: 20,
-    marginTop: 20,
-    textAlign: 'center',
-    color: 'green',
-    fontWeight: 'bold',
   },
 });
