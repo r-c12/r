@@ -1,119 +1,148 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, FlatList } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, ImageBackground, Modal, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const FeedbackForm = () => {
-  const [name, setName] = useState('');
+const App = () => {
+  const [isSignUp, setIsSignUp] = useState(true); // Toggle between Sign-up and Login forms
   const [email, setEmail] = useState('');
-  const [course, setCourse] = useState('');
-  const [rating, setRating] = useState('');
-  const [feedbacks, setFeedbacks] = useState([]);
+  const [password, setPassword] = useState('');
+  const [modalVisible, setModalVisible] = useState(false); // Modal visibility state
+  const [modalMessage, setModalMessage] = useState(''); // Modal message state
 
-  const clearForm = () => {
-    setName('');
-    setEmail('');
-    setCourse('');
-    setRating('');
+  // Store user data in AsyncStorage during sign-up
+  const storeUser = async (newUser) => {
+    try {
+      const storedUsers = await AsyncStorage.getItem('users');
+      let users = storedUsers ? JSON.parse(storedUsers) : [];
+      users.push(newUser);
+      await AsyncStorage.setItem('users', JSON.stringify(users));
+      setModalMessage('Sign-up Successful! User registered successfully.');
+      setModalVisible(true); // Show modal
+    } catch (error) {
+      setModalMessage('Error: Failed to store user data.');
+      setModalVisible(true);
+    }
   };
 
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  // Validate login credentials with the stored user data
+  const checkLogin = async () => {
+    try {
+      const storedUsers = await AsyncStorage.getItem('users');
+      let users = storedUsers ? JSON.parse(storedUsers) : [];
+      const user = users.find(user => user.email === email && user.password === password);
+      if (user) {
+        setModalMessage(`Login Successful! Welcome back, ${email}.`);
+      } else {
+        setModalMessage('Login Failed: Invalid email or password.');
+      }
+      setModalVisible(true); // Show modal
+    } catch (error) {
+      setModalMessage('Error: Failed to retrieve user data.');
+      setModalVisible(true);
+    }
   };
 
-  const validateForm = () => {
-    if (name.length < 3 || name.length > 50) {
-      Alert.alert('Validation Error', 'Name should be between 3 and 50 characters.');
-      return false;
+  // Handle sign-up button click
+  const handleSignUp = () => {
+    if (email && password) {
+      const newUser = { email, password };
+      storeUser(newUser);
+      setEmail('');
+      setPassword('');
+    } else {
+      setModalMessage('Sign-up Failed: Please enter both email and password.');
+      setModalVisible(true);
     }
-
-    if (!validateEmail(email)) {
-      Alert.alert('Validation Error', 'Please enter a valid email.');
-      return false;
-    }
-
-    if (rating < 1 || rating > 5) {
-      Alert.alert('Validation Error', 'Rating must be between 1 and 5.');
-      return false;
-    }
-
-    if (!course) {
-      Alert.alert('Validation Error', 'Please enter a course.');
-      return false;
-    }
-
-    return true;
   };
 
-  const handleSubmit = () => {
-    if (validateForm()) {
-      const feedback = { id: Date.now().toString(), name, email, course, rating };
-      setFeedbacks([...feedbacks, feedback]);
-      clearForm();
-      Alert.alert('Success', 'Feedback submitted successfully!');
+  // Handle login button click
+  const handleLogin = () => {
+    if (email && password) {
+      checkLogin();
+    } else {
+      setModalMessage('Login Failed: Please enter both email and password.');
+      setModalVisible(true);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Name:</Text>
-      <TextInput
-        style={styles.input}
-        value={name}
-        onChangeText={setName}
-        placeholder="Enter your name"
-        maxLength={50}
-      />
+    <ImageBackground 
+      source={{ uri: '/assets/butterfly.jpg' }} 
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <View style={styles.container}>
+        <Text style={styles.header}>{isSignUp ? 'Sign Up' : 'Login'}</Text>
 
-      <Text style={styles.label}>Email:</Text>
-      <TextInput
-        style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-        placeholder="Enter your email"
-        keyboardType="email-address"
-      />
+        <Text style={styles.label}>Email:</Text>
+        <TextInput
+          style={styles.input}
+          value={email}
+          onChangeText={setEmail}
+          placeholder="Enter your email"
+          keyboardType="email-address"
+        />
 
-      <Text style={styles.label}>Course:</Text>
-      <TextInput
-        style={styles.input}
-        value={course}
-        onChangeText={setCourse}
-        placeholder="Enter the course name"
-      />
+        <Text style={styles.label}>Password:</Text>
+        <TextInput
+          style={styles.input}
+          value={password}
+          onChangeText={setPassword}
+          placeholder="Enter your password"
+          secureTextEntry
+        />
 
-      <Text style={styles.label}>Rating (1-5):</Text>
-      <TextInput
-        style={styles.input}
-        value={rating}
-        onChangeText={setRating}
-        placeholder="Enter your rating"
-        keyboardType="numeric"
-        maxLength={1}
-      />
+        <Button
+          title={isSignUp ? 'Sign Up' : 'Login'}
+          onPress={isSignUp ? handleSignUp : handleLogin}
+        />
 
-      <Button title="Submit" onPress={handleSubmit} />
-      <Button title="Clear" onPress={clearForm} />
+        <Button
+          title={`Switch to ${isSignUp ? 'Login' : 'Sign Up'}`}
+          onPress={() => setIsSignUp(!isSignUp)}
+        />
 
-      <FlatList
-        data={feedbacks}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.feedbackItem}>
-            <Text style={styles.feedbackText}>
-              {item.name} ({item.course}): {item.rating}/5
-            </Text>
+        {/* Modal to show the status messages */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => {
+            setModalVisible(false);
+          }}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalView}>
+              <Text style={styles.modalText}>{modalMessage}</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        )}
-      />
-    </View>
+        </Modal>
+      </View>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  background: {
     flex: 1,
-    padding: 20,
     justifyContent: 'center',
+  },
+  container: {
+    backgroundColor: 'rgba(255, 255, 255, 0.8)', // Light background to make input fields readable
+    padding: 20,
+    marginHorizontal: 20,
+    borderRadius: 10,
+  },
+  header: {
+    fontSize: 24,
+    textAlign: 'center',
+    marginBottom: 20,
   },
   label: {
     fontSize: 18,
@@ -123,18 +152,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     padding: 10,
-    marginBottom: 10,
+    marginBottom: 20,
     borderRadius: 5,
-    fontSize: 16,
   },
-  feedbackItem: {
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalView: {
+    width: 300,
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalText: {
+    fontSize: 18,
+    marginBottom: 20,
+  },
+  closeButton: {
+    backgroundColor: '#2196F3',
     padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderRadius: 5,
   },
-  feedbackText: {
+  closeButtonText: {
+    color: 'white',
     fontSize: 16,
   },
 });
 
-export default FeedbackForm;
+export default App;
