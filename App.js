@@ -1,100 +1,110 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Button, Modal, TextInput, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, Button, StyleSheet, Alert, FlatList } from 'react-native';
 
-const DigitalClock = ({ isDarkMode }) => {
-  const [time, setTime] = useState(new Date());
+const FeedbackForm = () => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [course, setCourse] = useState('');
+  const [rating, setRating] = useState('');
+  const [feedbacks, setFeedbacks] = useState([]);
 
-  useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const formattedTime = time.toLocaleTimeString();
-
-  return (
-    <Text style={[styles.clockText, { color: isDarkMode ? '#fff' : '#000' }]}>
-      {formattedTime}
-    </Text>
-  );
-};
-
-const App = () => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [timer, setTimer] = useState(0);
-  const [timerInput, setTimerInput] = useState('');
-  const [timerOffMessage, setTimerOffMessage] = useState('');
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
+  const clearForm = () => {
+    setName('');
+    setEmail('');
+    setCourse('');
+    setRating('');
   };
 
-  const startTimer = () => {
-    const inputValue = parseInt(timerInput);
-    if (!isNaN(inputValue) && inputValue > 0) {
-      setTimer(inputValue);
-      setTimerOffMessage(''); // Reset the message when the timer starts
-      setIsModalVisible(false);
-    } else {
-      Alert.alert('Invalid Input', 'Please enter a valid number of seconds.');
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateForm = () => {
+    if (name.length < 3 || name.length > 50) {
+      Alert.alert('Validation Error', 'Name should be between 3 and 50 characters.');
+      return false;
+    }
+
+    if (!validateEmail(email)) {
+      Alert.alert('Validation Error', 'Please enter a valid email.');
+      return false;
+    }
+
+    if (rating < 1 || rating > 5) {
+      Alert.alert('Validation Error', 'Rating must be between 1 and 5.');
+      return false;
+    }
+
+    if (!course) {
+      Alert.alert('Validation Error', 'Please enter a course.');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = () => {
+    if (validateForm()) {
+      const feedback = { id: Date.now().toString(), name, email, course, rating };
+      setFeedbacks([...feedbacks, feedback]);
+      clearForm();
+      Alert.alert('Success', 'Feedback submitted successfully!');
     }
   };
 
-  useEffect(() => {
-    if (timer > 0) {
-      const countdown = setInterval(() => {
-        setTimer(prevTimer => {
-          if (prevTimer <= 1) {
-            clearInterval(countdown);
-            setTimer(0);
-            setTimerOffMessage('Timer is off'); // Display the message when the timer runs out
-            return 0;
-          }
-          return prevTimer - 1;
-        });
-      }, 1000);
-      return () => clearInterval(countdown);
-    }
-  }, [timer]);
-
-  const themeStyles = isDarkMode ? styles.darkContainer : styles.lightContainer;
-  const textColor = isDarkMode ? '#fff' : '#000';
-
   return (
-    <View style={[styles.container, themeStyles]}>
-      <DigitalClock isDarkMode={isDarkMode} />
-      <Button title="Toggle Theme" onPress={toggleTheme} />
-      <Button title="Set Timer" onPress={() => setIsModalVisible(true)} />
-      <Text style={[styles.timerText, { color: textColor }]}>
-        Time Remaining: {timer}s
-      </Text>
+    <View style={styles.container}>
+      <Text style={styles.label}>Name:</Text>
+      <TextInput
+        style={styles.input}
+        value={name}
+        onChangeText={setName}
+        placeholder="Enter your name"
+        maxLength={50}
+      />
 
-      {timer === 0 && timerOffMessage ? (
-        <Text style={[styles.timerOffText, { color: textColor }]}>
-          {timerOffMessage}
-        </Text>
-      ) : null}
+      <Text style={styles.label}>Email:</Text>
+      <TextInput
+        style={styles.input}
+        value={email}
+        onChangeText={setEmail}
+        placeholder="Enter your email"
+        keyboardType="email-address"
+      />
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isModalVisible}
-        onRequestClose={() => setIsModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalView}>
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              placeholder="Enter time in seconds"
-              onChangeText={setTimerInput}
-              value={timerInput}
-            />
-            <Button title="Start Timer" onPress={startTimer} />
-            <Button title="Close" onPress={() => setIsModalVisible(false)} />
+      <Text style={styles.label}>Course:</Text>
+      <TextInput
+        style={styles.input}
+        value={course}
+        onChangeText={setCourse}
+        placeholder="Enter the course name"
+      />
+
+      <Text style={styles.label}>Rating (1-5):</Text>
+      <TextInput
+        style={styles.input}
+        value={rating}
+        onChangeText={setRating}
+        placeholder="Enter your rating"
+        keyboardType="numeric"
+        maxLength={1}
+      />
+
+      <Button title="Submit" onPress={handleSubmit} />
+      <Button title="Clear" onPress={clearForm} />
+
+      <FlatList
+        data={feedbacks}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.feedbackItem}>
+            <Text style={styles.feedbackText}>
+              {item.name} ({item.course}): {item.rating}/5
+            </Text>
           </View>
-        </View>
-      </Modal>
+        )}
+      />
     </View>
   );
 };
@@ -102,44 +112,29 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  lightContainer: {
-    backgroundColor: '#fff',
-  },
-  darkContainer: {
-    backgroundColor: '#000',
-  },
-  clockText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-  },
-  timerText: {
-    fontSize: 24,
-    marginTop: 20,
-  },
-  timerOffText: {
-    fontSize: 18,
-    marginTop: 20,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalView: {
-    width: 300,
     padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 10,
+    justifyContent: 'center',
+  },
+  label: {
+    fontSize: 18,
+    marginVertical: 10,
   },
   input: {
-    borderBottomWidth: 1,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
     marginBottom: 10,
-    fontSize: 18,
+    borderRadius: 5,
+    fontSize: 16,
+  },
+  feedbackItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  feedbackText: {
+    fontSize: 16,
   },
 });
 
-export default App;
+export default FeedbackForm;
