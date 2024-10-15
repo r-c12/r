@@ -1,88 +1,87 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   Button,
+  FlatList,
+  TouchableOpacity,
   StyleSheet,
   useColorScheme,
-  Modal,
-  TouchableOpacity,
-  TextInput,
 } from 'react-native';
 
 const App = () => {
-  const [isDarkMode, setIsDarkMode] = useState(false); // State for dark mode
-  const [currentTime, setCurrentTime] = useState(''); // State for current time
-  const [timer, setTimer] = useState(0); // State for timer in seconds
-  const [isModalVisible, setModalVisible] = useState(false); // State for modal visibility
-  const [inputValue, setInputValue] = useState(''); // State for timer input
+  const [tasks, setTasks] = useState([]); // State to hold the list of tasks
+  const [taskInput, setTaskInput] = useState(''); // State for the current task input
+  const [editingIndex, setEditingIndex] = useState(null); // State for the index of the task being edited
+  const [isDarkMode, setIsDarkMode] = useState(false); // State for dark mode toggle
+
+  // Function to add or edit a task
+  const addOrEditTask = () => {
+    if (editingIndex !== null) {
+      const updatedTasks = tasks.map((task, index) =>
+        index === editingIndex ? { ...task, name: taskInput } : task
+      );
+      setTasks(updatedTasks);
+      setEditingIndex(null); // Clear editing index after editing
+    } else {
+      setTasks([...tasks, { name: taskInput, completed: false }]);
+    }
+    setTaskInput(''); // Clear input field after adding/editing
+  };
+
+  // Function to delete a task
+  const deleteTask = (index) => {
+    setTasks(tasks.filter((_, i) => i !== index)); // Filter out the task to be deleted
+  };
+
+  // Function to toggle task completion status
+  const toggleCompletion = (index) => {
+    const updatedTasks = tasks.map((task, i) =>
+      i === index ? { ...task, completed: !task.completed } : task
+    );
+    setTasks(updatedTasks);
+  };
+
+  // Function to start editing a task
+  const editTask = (index) => {
+    setTaskInput(tasks[index].name); // Populate the input with the task's name
+    setEditingIndex(index); // Set the index of the task being edited
+  };
 
   // Function to toggle dark/light mode
   const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
+    setIsDarkMode((prevMode) => !prevMode); // Toggle the dark mode state
   };
-
-  // Function to update current time every second
-  const updateTime = () => {
-    const now = new Date();
-    const timeString = now.toTimeString().split(' ')[0]; // Get time in HH:MM:SS
-    setCurrentTime(timeString);
-  };
-
-  // Function to start timer
-  const startTimer = () => {
-    const seconds = parseInt(inputValue);
-    if (!isNaN(seconds) && seconds > 0) {
-      setTimer(seconds);
-      setModalVisible(false);
-      const timerInterval = setInterval(() => {
-        setTimer((prevTimer) => {
-          if (prevTimer <= 1) {
-            clearInterval(timerInterval);
-            alert('Time is up!');
-            return 0; // Reset timer
-          }
-          return prevTimer - 1;
-        });
-      }, 1000);
-    } else {
-      alert('Please enter a valid number');
-    }
-  };
-
-  // Update time every second
-  useEffect(() => {
-    const timeInterval = setInterval(updateTime, 1000);
-    return () => clearInterval(timeInterval); // Cleanup interval
-  }, []);
 
   return (
     <View style={[styles.container, isDarkMode ? styles.dark : styles.light]}>
-      <Text style={styles.timeText}>{currentTime}</Text>
       <Button title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"} onPress={toggleDarkMode} />
       
-      <Button title="Set Timer" onPress={() => setModalVisible(true)} />
+      <TextInput
+        style={styles.input}
+        placeholder="Add a new task"
+        value={taskInput}
+        onChangeText={setTaskInput}
+      />
+      <Button title={editingIndex !== null ? "Edit Task" : "Add Task"} onPress={addOrEditTask} />
       
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isModalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter time in seconds"
-            keyboardType="numeric"
-            onChangeText={setInputValue}
-            value={inputValue}
-          />
-          <Button title="Start Timer" onPress={startTimer} />
-          <Button title="Close" onPress={() => setModalVisible(false)} />
-        </View>
-      </Modal>
-      
-      {timer > 0 && <Text style={styles.timerText}>Timer: {timer}s</Text>}
+      <FlatList
+        data={tasks}
+        renderItem={({ item, index }) => (
+          <TouchableOpacity 
+            style={[styles.taskItem, item.completed && styles.completedTask]} 
+            onPress={() => toggleCompletion(index)} // Toggle completion on press
+          >
+            <Text style={styles.taskText}>{item.name}</Text>
+            <View style={styles.buttonContainer}>
+              <Button title="Edit" onPress={() => editTask(index)} />
+              <Button title="Delete" onPress={() => deleteTask(index)} />
+            </View>
+          </TouchableOpacity>
+        )}
+        keyExtractor={(_, index) => index.toString()} // Unique key for each item
+      />
     </View>
   );
 };
@@ -91,40 +90,43 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
     padding: 20,
   },
   light: {
     backgroundColor: '#fff',
+    color: '#000',
   },
   dark: {
     backgroundColor: '#333',
-  },
-  timeText: {
-    fontSize: 48,
-    marginBottom: 20,
-    color: '#000',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    color: '#fff',
   },
   input: {
     borderColor: '#ccc',
     borderWidth: 1,
     padding: 10,
-    width: '80%',
     marginBottom: 10,
-    backgroundColor: '#fff',
   },
-  timerText: {
-    fontSize: 24,
-    marginTop: 20,
-    color: '#000',
+  taskItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 15,
+    marginVertical: 5,
+    borderRadius: 5,
+    backgroundColor: '#f9f9f9',
+    transition: 'background-color 0.3s ease',
+  },
+  taskText: {
+    fontSize: 18,
+    flex: 1, // Allow the task text to take available space
+  },
+  completedTask: {
+    backgroundColor: '#d3ffd3', // Light green for completed tasks
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
 });
 
 export default App;
+
