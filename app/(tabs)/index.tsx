@@ -1,130 +1,153 @@
+// App.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   Button,
   StyleSheet,
-  useColorScheme,
   Modal,
+  SafeAreaView,
   TouchableOpacity,
-  TextInput,
 } from 'react-native';
 
 const App = () => {
-  const [isDarkMode, setIsDarkMode] = useState(false); // State for dark mode
-  const [currentTime, setCurrentTime] = useState(''); // State for current time
-  const [timer, setTimer] = useState(0); // State for timer in seconds
-  const [isModalVisible, setModalVisible] = useState(false); // State for modal visibility
-  const [inputValue, setInputValue] = useState(''); // State for timer input
+  const [time, setTime] = useState(10);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
+  const [isModalVisible, setModalVisible] = useState(false);
 
-  // Function to toggle dark/light mode
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-  };
+  useEffect(() => {
+    let timer;
 
-  // Function to update current time every second
-  const updateTime = () => {
-    const now = new Date();
-    const timeString = now.toTimeString().split(' ')[0]; // Get time in HH:MM:SS
-    setCurrentTime(timeString);
-  };
-
-  // Function to start timer
-  const startTimer = () => {
-    const seconds = parseInt(inputValue);
-    if (!isNaN(seconds) && seconds > 0) {
-      setTimer(seconds);
-      setModalVisible(false);
-      const timerInterval = setInterval(() => {
-        setTimer((prevTimer) => {
-          if (prevTimer <= 1) {
-            clearInterval(timerInterval);
-            alert('Time is up!');
-            return 0; // Reset timer
-          }
-          return prevTimer - 1;
-        });
+    if (isRunning && time > 0) {
+      timer = setInterval(() => {
+        setTime(prevTime => prevTime - 1);
       }, 1000);
-    } else {
-      alert('Please enter a valid number');
+    } else if (time === 0) {
+      // Show modal when the countdown reaches zero
+      setModalVisible(true);
+      setIsRunning(false); // Stop the timer
+    }
+
+    return () => clearInterval(timer); // Cleanup on unmount
+  }, [isRunning, time]);
+
+  const startTimer = () => {
+    if (!isRunning) { // Start the timer only if it is not already running
+      setIsRunning(true);
     }
   };
 
-  // Update time every second
-  useEffect(() => {
-    const timeInterval = setInterval(updateTime, 1000);
-    return () => clearInterval(timeInterval); // Cleanup interval
-  }, []);
+  const stopTimer = () => {
+    setIsRunning(false);
+  };
+
+  const resetTimer = () => {
+    setIsRunning(false);
+    setTime(10);
+  };
+
+  const toggleTheme = () => setIsDarkTheme(prev => !prev);
+
+  const closeModal = () => {
+    setModalVisible(false);
+    resetTimer(); // Reset timer after closing modal
+  };
 
   return (
-    <View style={[styles.container, isDarkMode ? styles.dark : styles.light]}>
-      <Text style={styles.timeText}>{currentTime}</Text>
-      <Button title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"} onPress={toggleDarkMode} />
-      
-      <Button title="Set Timer" onPress={() => setModalVisible(true)} />
-      
+    <SafeAreaView style={[styles.container, isDarkTheme ? styles.darkTheme : styles.lightTheme]}>
+      <View style={styles.toggleContainer}>
+        <Button title="Toggle Theme" onPress={toggleTheme} />
+      </View>
+      <Text style={styles.timerText}>{time}</Text>
+      <View style={styles.buttonContainer}>
+        <Button title="Start" onPress={startTimer} />
+        <Button title="Stop" onPress={stopTimer} />
+        <Button title="Reset" onPress={resetTimer} />
+      </View>
+
+      {/* Custom Modal */}
       <Modal
-        animationType="slide"
         transparent={true}
         visible={isModalVisible}
-        onRequestClose={() => setModalVisible(false)}
+        animationType="slide"
       >
         <View style={styles.modalContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter time in seconds"
-            keyboardType="numeric"
-            onChangeText={setInputValue}
-            value={inputValue}
-          />
-          <Button title="Start Timer" onPress={startTimer} />
-          <Button title="Close" onPress={() => setModalVisible(false)} />
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>🎉 Time’s Up!</Text>
+            <Text style={styles.modalMessage}>Great job completing the countdown!</Text>
+            <TouchableOpacity style={styles.modalButton} onPress={closeModal}>
+              <Text style={styles.modalButtonText}>Restart Timer</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
-      
-      {timer > 0 && <Text style={styles.timerText}>Timer: {timer}s</Text>}
-    </View>
+    </SafeAreaView>
   );
 };
 
-// Styles for the application
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    alignItems: 'center',
   },
-  light: {
-    backgroundColor: '#fff',
+  lightTheme: {
+    backgroundColor: '#ffffff',
+    color: '#000000',
   },
-  dark: {
-    backgroundColor: '#333',
+  darkTheme: {
+    backgroundColor: '#333333',
+    color: '#ffffff',
   },
-  timeText: {
+  timerText: {
     fontSize: 48,
-    marginBottom: 20,
-    color: '#000',
+    textAlign: 'center',
+    marginVertical: 20,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  toggleContainer: {
+    margin: 20,
   },
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
   },
-  input: {
-    borderColor: '#ccc',
-    borderWidth: 1,
-    padding: 10,
-    width: '80%',
-    marginBottom: 10,
+  modalContent: {
+    width: 300,
+    padding: 20,
     backgroundColor: '#fff',
+    borderRadius: 10,
+    alignItems: 'center',
   },
-  timerText: {
+  modalTitle: {
     fontSize: 24,
-    marginTop: 20,
-    color: '#000',
+    fontWeight: 'bold',
+  },
+  modalMessage: {
+    fontSize: 16,
+    marginVertical: 10,
+  },
+  modalButton: {
+    backgroundColor: '#007BFF',
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 16,
   },
 });
 
 export default App;
+
+
