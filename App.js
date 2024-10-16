@@ -1,158 +1,171 @@
-import React, { useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, StyleSheet, Image, Switch, Animated } from 'react-native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { TransitionPresets } from '@react-navigation/stack';
 
-// Create tab navigator
+// Sample data for Movies and TV Shows with images
+const movies = [
+  { id: '1', title: 'The Shawshank Redemption', image: 'https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg' },
+  { id: '2', title: 'The Dark Knight', image: 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg' },
+  { id: '3', title: 'Inception', image: 'https://static.toiimg.com/photo/msid-6177430/6177430.jpg?57181' },
+  { id: '4', title: 'Pulp Fiction', image: 'https://cdn.britannica.com/66/141066-050-36AB089D/John-Travolta-Samuel-L-Jackson-Pulp-Fiction.jpg' },
+];
+
+const tvShows = [
+  { id: '1', title: 'Breaking Bad', image: 'https://image.tmdb.org/t/p/w500/ggFHVNu6YYI5L9pCfOacjizRGt.jpg' },
+  { id: '2', title: 'Game of Thrones', image: 'https://image.tmdb.org/t/p/w500/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg' },
+  { id: '3', title: 'Stranger Things', image: 'https://image.tmdb.org/t/p/w500/x2LSRK2Cm7MZhjluni1msVJ3wDF.jpg' },
+  { id: '4', title: 'The Witcher', image: 'https://image.tmdb.org/t/p/w500/84XPpjGvxNyExjSuLQe0SzioErt.jpg' },
+];
+
+// Movie Screen Component with dark mode support and transition
+function MoviesScreen({ theme }) {
+  return (
+    <Animated.View style={[styles.container, { backgroundColor: theme.background }]}>
+      <Text style={[styles.heading, { color: theme.text }]}>Popular Movies</Text>
+      <FlatList
+        data={movies}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.itemContainer}>
+            <Image source={{ uri: item.image }} style={styles.image} />
+            <Text style={[styles.itemText, { color: theme.text }]}>{item.title}</Text>
+          </View>
+        )}
+      />
+    </Animated.View>
+  );
+}
+
+// TV Shows Screen Component with dark mode support and transition
+function TVShowsScreen({ theme }) {
+  return (
+    <Animated.View style={[styles.container, { backgroundColor: theme.background }]}>
+      <Text style={[styles.heading, { color: theme.text }]}>Favourite TV Shows</Text>
+      <FlatList
+        data={tvShows}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.itemContainer}>
+            <Image source={{ uri: item.image }} style={styles.image} />
+            <Text style={[styles.itemText, { color: theme.text }]}>{item.title}</Text>
+          </View>
+        )}
+      />
+    </Animated.View>
+  );
+}
+
 const Tab = createBottomTabNavigator();
 
-// Screen 1: Form to collect book details
-function BookForm({ addBook }) {
-  const [title, setTitle] = useState('');
-  const [author, setAuthor] = useState('');
-  const [genre, setGenre] = useState('');
-  const [isPressed, setIsPressed] = useState(false); // For hover-like effect
-
-  const handleSubmit = () => {
-    if (title && author && genre) {
-      // Add the new book details
-      addBook({ title, author, genre });
-      alert('Book added! Switch to the "View Details" tab to see the entries.');
-      // Clear the form
-      setTitle('');
-      setAuthor('');
-      setGenre('');
-    } else {
-      alert('Please fill in all fields!');
-    }
-  };
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Book Title:</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter book title"
-        value={title}
-        onChangeText={setTitle}
-      />
-
-      <Text style={styles.label}>Author:</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter author name"
-        value={author}
-        onChangeText={setAuthor}
-      />
-
-      <Text style={styles.label}>Genre:</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter genre"
-        value={genre}
-        onChangeText={setGenre}
-      />
-
-      <Pressable
-        onPressIn={() => setIsPressed(true)}   // Press effect (like hover)
-        onPressOut={() => setIsPressed(false)} // Reset when released
-        onPress={handleSubmit}
-        style={({ pressed }) => [
-          styles.button,
-          pressed || isPressed ? styles.buttonPressed : styles.buttonNormal,
-        ]}
-      >
-        <Text style={styles.buttonText}>Submit</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-// Screen 2: Display the list of submitted book details
-function DisplayBooks({ books }) {
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {books.length > 0 ? (
-        books.map((book, index) => (
-          <View key={index} style={styles.resultContainer}>
-            <Text style={styles.result}>Book Title: {book.title}</Text>
-            <Text style={styles.result}>Author: {book.author}</Text>
-            <Text style={styles.result}>Genre: {book.genre}</Text>
-          </View>
-        ))
-      ) : (
-        <Text style={styles.result}>No book details available. Please add some in the form.</Text>
-      )}
-    </ScrollView>
-  );
-}
-
-// App component with tab navigation
 export default function App() {
-  const [books, setBooks] = useState([]);
+  const [isDarkMode, setIsDarkMode] = useState(false); // State to toggle dark/light mode
+  const [bgColor] = useState(new Animated.Value(0)); // Animated value for transitions
 
-  // Function to add a new book to the list
-  const addBook = (book) => {
-    setBooks([...books, book]);
+  // Define theme colors for dark and light mode
+  const lightTheme = {
+    background: '#fff',
+    text: '#000',
   };
 
+  const darkTheme = {
+    background: '#121212',
+    text: '#fff',
+  };
+
+  const currentTheme = isDarkMode ? darkTheme : lightTheme;
+
+  // Animate background color transition when theme changes
+  useEffect(() => {
+    Animated.timing(bgColor, {
+      toValue: isDarkMode ? 1 : 0,
+      duration: 500, // Adjust transition duration
+      useNativeDriver: false,
+    }).start();
+  }, [isDarkMode]);
+
+  const backgroundColorInterpolation = bgColor.interpolate({
+    inputRange: [0, 1],
+    outputRange: [lightTheme.background, darkTheme.background],
+  });
+
+  const textColorInterpolation = bgColor.interpolate({
+    inputRange: [0, 1],
+    outputRange: [lightTheme.text, darkTheme.text],
+  });
+
   return (
-    <NavigationContainer>
-      <Tab.Navigator>
-        <Tab.Screen name="BookForm">
-          {() => <BookForm addBook={addBook} />}
+    <NavigationContainer theme={isDarkMode ? DarkTheme : DefaultTheme}>
+      <Animated.View style={[styles.switchContainer, { backgroundColor: backgroundColorInterpolation }]}>
+        <Animated.Text style={{ color: textColorInterpolation }}>Dark Mode</Animated.Text>
+        <Switch
+          value={isDarkMode}
+          onValueChange={() => setIsDarkMode((prevMode) => !prevMode)}
+        />
+      </Animated.View>
+
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          tabBarIcon: ({ color, size }) => {
+            let iconName;
+            if (route.name === 'Movies') {
+              iconName = 'film-outline';
+            } else if (route.name === 'TV Shows') {
+              iconName = 'tv-outline';
+            }
+            return <Ionicons name={iconName} size={size} color={color} />;
+          },
+          ...TransitionPresets.SlideFromRightIOS, // Adding transition effect
+        })}
+        tabBarOptions={{
+          activeTintColor: 'tomato',
+          inactiveTintColor: 'gray',
+        }}
+      >
+        <Tab.Screen name="Movies">
+          {() => <MoviesScreen theme={currentTheme} />}
         </Tab.Screen>
-        <Tab.Screen name="DisplayBooks">
-          {() => <DisplayBooks books={books} />}
+        <Tab.Screen name="TV Shows">
+          {() => <TVShowsScreen theme={currentTheme} />}
         </Tab.Screen>
       </Tab.Navigator>
     </NavigationContainer>
   );
 }
 
-// Styles for the components
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#fff',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    marginTop: 20,
   },
-  label: {
-    fontSize: 18,
-    marginVertical: 8,
+  heading: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 8,
-    marginBottom: 16,
-    borderRadius: 4,
-  },
-  button: {
-    padding: 10,
-    borderRadius: 5,
+  itemContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
+    marginBottom: 10,
   },
-  buttonNormal: {
-    backgroundColor: '#007BFF',
+  image: {
+    width: 50,
+    height: 75,
+    marginRight: 10,
+    borderRadius: 5,
   },
-  buttonPressed: {
-    backgroundColor: '#0056b3', // Darker shade on press (hover effect)
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  resultContainer: {
-    marginBottom: 16,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
-  },
-  result: {
+  itemText: {
     fontSize: 18,
-    marginVertical: 4,
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 10,
   },
 });
